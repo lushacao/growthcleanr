@@ -1425,111 +1425,113 @@ cleanbatch <- function(data.df,
 
   # 16.  Exclude measurements for subjects/parameters with only 1 or 2 measurements with exc_*=0. This step uses a variety of criteria,
   #      including the tbc*sd of the other parameter.
-  if (!quietly)
-    cat(sprintf(
-      "[%s] Exclude single measurements and pairs...\n",
-      Sys.time()
-    ))
-  data.df$tbc.other.sd <- swap_parameters(df = data.df)
-  data.df[, exclude := (function(df) {
-    valid.rows <- which(valid(df))
-    # calculate median SD for other parameter (used in steps below)
-    median.tbc.other.sd <- median(df$tbc.other.sd)
-    # a.  Identify subjects/parameters with only 2 values with exc_*==0, and determine the following:
-    #   1.  d_tbc*sd_other=the absolute value difference in tbc*sd
-    #   2.	d_agedays_other=the difference in agedays between the 2 values
-    #   3.	tbcOsd=the tbc*sd for the other parameter on the same ageday
-    # NOTE: this is done as the first step below for efficiency
-    #   4.	median_tbcOsd= the median tbc*sd for the other parameter
-    #   5.	abs_d_*_O is the absolute value of the difference between tbc*sd and tbcOsd if tbcOsd is not missing;
-    #       it is the absolute value of the difference between tbc*sd and median_tbcOsd if tbcOsd is missing but median_tbcOsd is not missing;
-    #       and is missing if tbcOsd and median_tbcOsd are both missing
-    if (length(valid.rows) == 2) {
-      delta.tbc.sd.other <- abs(df$tbc.sd[valid.rows[1]] - df$tbc.sd[valid.rows[2]])
-      delta.agedays.other <- abs(df$agedays[valid.rows[1]] - df$agedays[valid.rows[2]])
-      abs.delta.other <- with(df, ifelse(
-        !is.na(tbc.other.sd),
-        abs(tbc.sd - tbc.other.sd),
-        ifelse(
-          !is.na(median.tbc.other.sd),
-          abs(tbc.sd - median.tbc.other.sd),
-          NA
-        )
-      ))
+  ### skip 16 for cleaning head circumference
+  
+  # if (!quietly)
+  #   cat(sprintf(
+  #     "[%s] Exclude single measurements and pairs...\n",
+  #     Sys.time()
+  #   ))
+  # data.df$tbc.other.sd <- swap_parameters(df = data.df)
+  # data.df[, exclude := (function(df) {
+  #   valid.rows <- which(valid(df))
+  #   # calculate median SD for other parameter (used in steps below)
+  #   median.tbc.other.sd <- median(df$tbc.other.sd)
+  #   # a.  Identify subjects/parameters with only 2 values with exc_*==0, and determine the following:
+  #   #   1.  d_tbc*sd_other=the absolute value difference in tbc*sd
+  #   #   2.	d_agedays_other=the difference in agedays between the 2 values
+  #   #   3.	tbcOsd=the tbc*sd for the other parameter on the same ageday
+  #   # NOTE: this is done as the first step below for efficiency
+  #   #   4.	median_tbcOsd= the median tbc*sd for the other parameter
+  #   #   5.	abs_d_*_O is the absolute value of the difference between tbc*sd and tbcOsd if tbcOsd is not missing;
+  #   #       it is the absolute value of the difference between tbc*sd and median_tbcOsd if tbcOsd is missing but median_tbcOsd is not missing;
+  #   #       and is missing if tbcOsd and median_tbcOsd are both missing
+  #   if (length(valid.rows) == 2) {
+  #     delta.tbc.sd.other <- abs(df$tbc.sd[valid.rows[1]] - df$tbc.sd[valid.rows[2]])
+  #     delta.agedays.other <- abs(df$agedays[valid.rows[1]] - df$agedays[valid.rows[2]])
+  #     abs.delta.other <- with(df, ifelse(
+  #       !is.na(tbc.other.sd),
+  #       abs(tbc.sd - tbc.other.sd),
+  #       ifelse(
+  #         !is.na(median.tbc.other.sd),
+  #         abs(tbc.sd - median.tbc.other.sd),
+  #         NA
+  #       )
+  #     ))
 
-      # b.	For subjects/parameters with 2 values with exc_*==0, replace exc_*=17 if one of the following sets of criteria are met:
-      #   1.	If |d_agedays_other|>365.25 and |d_tbc*sd_other|>3; replace exc_*=17 for the value of the pair that has the largest abs_d_*_O. If abs_d_*O is missing, replace exc_*=17 for the value of the pair with the higher |tbc*sd|
-      #   2.	If |d_agedays_other|<365.25 and |d_tbc*sd_other|>2; replace exc_*=18 for the value of the pair that has the largest abs_d_*_O. If abs_d_*O is missing, replace exc_*=18 for the value of the pair with the higher |tbc*sd|
-      #
-      # MODE default
-      #   1.  uses current behavior outlined in b, in else statement
-      #
-      # MODE flag.both
-      #   1.  similar to b, except in cases where only HTs values exist or only WTs values exist, both are dropped instead of only 1 (first if)
-      #
-      #
-      # check whether each value in double has other parameters (make sure they don't first)
-      if (lt3.exclude.mode == "flag.both" &&
-          (is.na(df$tbc.other.sd[valid.rows[1]])) &&
-          (is.na(df$tbc.other.sd[valid.rows[2]])) &&
-          is.na(abs.delta.other)) {
-        # if they don't then do test
-        # check default thresholds, if they fail then exclude both regardless of tbc.sd
-        if (na_as_false(delta.agedays.other >= 365.25 &
-                        delta.tbc.sd.other > 3)) {
-          df$exclude[valid.rows[1]] = 'Exclude-Pair-Delta-19'
-          df$exclude[valid.rows[2]] = 'Exclude-Pair-Delta-19'
-        } else if (na_as_false(delta.agedays.other < 365.25 &
-                               delta.tbc.sd.other > 2)) {
-          df$exclude[valid.rows[1]] = 'Exclude-Pair-Delta-19'
-          df$exclude[valid.rows[2]] = 'Exclude-Pair-Delta-19'
-        }
+  #     # b.	For subjects/parameters with 2 values with exc_*==0, replace exc_*=17 if one of the following sets of criteria are met:
+  #     #   1.	If |d_agedays_other|>365.25 and |d_tbc*sd_other|>3; replace exc_*=17 for the value of the pair that has the largest abs_d_*_O. If abs_d_*O is missing, replace exc_*=17 for the value of the pair with the higher |tbc*sd|
+  #     #   2.	If |d_agedays_other|<365.25 and |d_tbc*sd_other|>2; replace exc_*=18 for the value of the pair that has the largest abs_d_*_O. If abs_d_*O is missing, replace exc_*=18 for the value of the pair with the higher |tbc*sd|
+  #     #
+  #     # MODE default
+  #     #   1.  uses current behavior outlined in b, in else statement
+  #     #
+  #     # MODE flag.both
+  #     #   1.  similar to b, except in cases where only HTs values exist or only WTs values exist, both are dropped instead of only 1 (first if)
+  #     #
+  #     #
+  #     # check whether each value in double has other parameters (make sure they don't first)
+  #     if (lt3.exclude.mode == "flag.both" &&
+  #         (is.na(df$tbc.other.sd[valid.rows[1]])) &&
+  #         (is.na(df$tbc.other.sd[valid.rows[2]])) &&
+  #         is.na(abs.delta.other)) {
+  #       # if they don't then do test
+  #       # check default thresholds, if they fail then exclude both regardless of tbc.sd
+  #       if (na_as_false(delta.agedays.other >= 365.25 &
+  #                       delta.tbc.sd.other > 3)) {
+  #         df$exclude[valid.rows[1]] = 'Exclude-Pair-Delta-19'
+  #         df$exclude[valid.rows[2]] = 'Exclude-Pair-Delta-19'
+  #       } else if (na_as_false(delta.agedays.other < 365.25 &
+  #                              delta.tbc.sd.other > 2)) {
+  #         df$exclude[valid.rows[1]] = 'Exclude-Pair-Delta-19'
+  #         df$exclude[valid.rows[2]] = 'Exclude-Pair-Delta-19'
+  #       }
 
-      } else {
-        # default method if other mode is not used or if other parameters exist
-        worst.row <- order(valid(df),
-                           abs(df$tbc.sd),
-                           abs(abs.delta.other),
-                           decreasing = T)[1]
-        if (na_as_false(delta.agedays.other >= 365.25 &
-                        delta.tbc.sd.other > 3)) {
-          df$exclude[worst.row] <- 'Exclude-Pair-Delta-17'
-        } else if (na_as_false(delta.agedays.other < 365.25 &
-                               delta.tbc.sd.other > 2)) {
-          df$exclude[worst.row] <- 'Exclude-Pair-Delta-18'
-        }
-      }
-    }
-    # c.	Identify subjects/parameters with exactly 1 value for which exc_*=0. This will include subjects/parameters for which a value was excluded in step 16b.
-    #     Determine tbcOsd and median_tbcOsd as described in step 16a3 and 16a4 above.
-    # d.	For subjects/parameters with 1 value for which exc_*=0,  replace exc_*=19 if one of the following sets of criteria are met:
-    #   1.	|tbc*sd|>3 & |tbc*sd-tbcOsd|>5 & tbcOsd is not missing
-    #   2.	|tbc*sd|>3 & |tbc*sd-median_tbcOsd|>5 & tbcOsd is missing & median_tbcOsd is not missing
-    #   3.	|tbc*sd|>5 & tbcOsd is missing & median_tbcOsd is missing
-    valid.rows <- valid(df)
-    # NOTE: valid.rows is now a boolean.  was a row number in code above
-    if (sum(valid.rows) == 1) {
-      #cat("param = ", df[valid.rows, param])
-      df[valid.rows &
-           (
-             abs(tbc.sd) > 3 &
-               abs(
-                 tbc.sd - ifelse(
-                   !is.na(tbc.other.sd),
-                   tbc.other.sd,
-                   median.tbc.other.sd
-                 )
-               ) > 5 |
-               abs(tbc.sd) > 5 &
-               is.na(tbc.other.sd) & is.na(median.tbc.other.sd)
-           ),
-         exclude := 'Exclude-Single-Outlier']
-    }
+  #     } else {
+  #       # default method if other mode is not used or if other parameters exist
+  #       worst.row <- order(valid(df),
+  #                          abs(df$tbc.sd),
+  #                          abs(abs.delta.other),
+  #                          decreasing = T)[1]
+  #       if (na_as_false(delta.agedays.other >= 365.25 &
+  #                       delta.tbc.sd.other > 3)) {
+  #         df$exclude[worst.row] <- 'Exclude-Pair-Delta-17'
+  #       } else if (na_as_false(delta.agedays.other < 365.25 &
+  #                              delta.tbc.sd.other > 2)) {
+  #         df$exclude[worst.row] <- 'Exclude-Pair-Delta-18'
+  #       }
+  #     }
+  #   }
+  #   # c.	Identify subjects/parameters with exactly 1 value for which exc_*=0. This will include subjects/parameters for which a value was excluded in step 16b.
+  #   #     Determine tbcOsd and median_tbcOsd as described in step 16a3 and 16a4 above.
+  #   # d.	For subjects/parameters with 1 value for which exc_*=0,  replace exc_*=19 if one of the following sets of criteria are met:
+  #   #   1.	|tbc*sd|>3 & |tbc*sd-tbcOsd|>5 & tbcOsd is not missing
+  #   #   2.	|tbc*sd|>3 & |tbc*sd-median_tbcOsd|>5 & tbcOsd is missing & median_tbcOsd is not missing
+  #   #   3.	|tbc*sd|>5 & tbcOsd is missing & median_tbcOsd is missing
+  #   valid.rows <- valid(df)
+  #   # NOTE: valid.rows is now a boolean.  was a row number in code above
+  #   if (sum(valid.rows) == 1) {
+  #     #cat("param = ", df[valid.rows, param])
+  #     df[valid.rows &
+  #          (
+  #            abs(tbc.sd) > 3 &
+  #              abs(
+  #                tbc.sd - ifelse(
+  #                  !is.na(tbc.other.sd),
+  #                  tbc.other.sd,
+  #                  median.tbc.other.sd
+  #                )
+  #              ) > 5 |
+  #              abs(tbc.sd) > 5 &
+  #              is.na(tbc.other.sd) & is.na(median.tbc.other.sd)
+  #          ),
+  #        exclude := 'Exclude-Single-Outlier']
+  #   }
 
-    # ensure factor levels didn't accidentally get mangled
-    return(factor(df$exclude, levels = exclude.levels, ordered = T))
+  #   # ensure factor levels didn't accidentally get mangled
+  #   return(factor(df$exclude, levels = exclude.levels, ordered = T))
 
-  })(copy(.SD)), by = .(subjid, param), .SDcols = c('agedays', 'tbc.sd', 'tbc.other.sd', 'exclude', 'param')] #added param here for debugging, i think it's dropped otherwise
+  # })(copy(.SD)), by = .(subjid, param), .SDcols = c('agedays', 'tbc.sd', 'tbc.other.sd', 'exclude', 'param')] #added param here for debugging, i think it's dropped otherwise
 
   # 17.  Exclude measurements based on error load for the subject
   # a.	For each subject/parameter determine the following:
