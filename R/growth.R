@@ -854,9 +854,9 @@ cleanbatch <- function(data.df,
              dnext.sd.plus < -1 & dnext.sd.minus < -1,
            temp.exclude := 'Exclude-EWMA-8']
 
-        # 14h.ii.	Replace temp_exc_*=9 (mark for potential exclusion) if the value is the first of 3 or more measurements for a subject/parameter 
+        # 14h.ii.	Replace temp_exc_*=9 (mark for potential exclusion) if the value is the first of 3 or more measurements for a subject/parameter
         #      AND d_agedays_next< 365.25 AND one of the following sets of criteria are met
-        # 
+        #
         #     1.	dewma_*>2 & dewma_*_aft>1 & d_nextsd_*>1 & d_nextsd_plus_*>1 & d_nextsd_minus_*>1 & agedays>=30
         #     2.	dewma_*<-2 & dewma_*_aft<-1 & d_nextsd_*<-1 & d_nextsd_plus_*<-1 & d_nextsd_minus_*<-1 & agedays>=30
         #     3.  dewma_*>2.5 & dewma_*_aft>1 & d_nextsd_*>1 & d_nextsd_plus_*>1 & d_nextsd_minus_*>1 & agedays<30
@@ -1852,7 +1852,7 @@ cleangrowth <- function(subjid,
   # calculate z scores
   if (!quietly)
     cat(sprintf("[%s] Calculating z-scores...\n", Sys.time()))
-  measurement.to.z <- read_anthro(ref.data.path, cdc.only = T)
+  measurement.to.z <- read_anthro(ref.data.path, cdc.only = F)
   data.all[, z.orig := measurement.to.z(param, agedays, sex, v)]
 
   # calculate "standard deviation" scores
