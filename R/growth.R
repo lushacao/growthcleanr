@@ -350,7 +350,7 @@ cleanbatch <- function(data.df,
                   delta.next.sd > 2 &
                   !is.na(delta.prev.sd) & delta.prev.sd > 2
                 |
-                  param == 'HEIGHTCM' &
+                  param %in% c('HEIGHTCM', 'HCCM') &
                   (tbc.sd - ewma.all) > 5 &
                   (tbc.sd - ewma.before) > 4 &
                   (tbc.sd - ewma.after) > 4 & tbc.sd > 7
@@ -379,7 +379,7 @@ cleanbatch <- function(data.df,
                   delta.next.sd < -2 &
                   !is.na(delta.prev.sd) & delta.prev.sd < -2
                 |
-                  param == 'HEIGHTCM' &
+                  param %in% c('HEIGHTCM','HCCM') &
                   (tbc.sd - ewma.all) < -5 &
                   (tbc.sd - ewma.before) < -4 &
                   (tbc.sd - ewma.after) < -4 & tbc.sd < -7
@@ -1852,7 +1852,7 @@ cleangrowth <- function(subjid,
   # calculate z scores
   if (!quietly)
     cat(sprintf("[%s] Calculating z-scores...\n", Sys.time()))
-  measurement.to.z <- read_anthro(ref.data.path, cdc.only = F)
+  measurement.to.z <- read_anthro(ref.data.path, cdc.only = T)
   data.all[, z.orig := measurement.to.z(param, agedays, sex, v)]
 
   # calculate "standard deviation" scores
@@ -2206,6 +2206,20 @@ read_anthro <- function(path = "", cdc.only = F) {
         csdpos = cdc_bmi_csd_pos,
         csdneg = cdc_bmi_csd_neg
       )
+    ),
+    with(
+      growth_cdc_ext,
+      data.frame(
+        src = 'CDC',
+        param = 'HCCM',
+        sex,
+        age = agedays,
+        l = cdc_hc_l,
+        m = cdc_hc_m,
+        s = cdc_hc_s,
+        csdpos = cdc_hc_csd_pos,
+        csdneg = cdc_hc_csd_neg
+      )
     )
   )
 
@@ -2347,7 +2361,7 @@ as_matrix_delta <- function(agedays) {
 
 #' Calculate median SD score by age for each parameter.
 #'
-#' @param param Vector identifying each measurement, may be 'WEIGHTKG', or 'HEIGHTCM'.
+#' @param param Vector identifying each measurement, may be 'WEIGHTKG', 'HEIGHTCM', or 'HCCM'
 #' @param agedays Numeric vector containing the age in days at each measurement.
 #' @param sex Vector identifying the gender of the subject, may be 'M', 'm', or 0 for males, vs. 'F', 'f' or 1 for females.
 #' @param sd.orig Vector of previously calculated standard deviation (SD) scores for each measurement before re-centering.
