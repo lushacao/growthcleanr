@@ -1619,11 +1619,12 @@ cleanbatch <- function(data.df,
 #' count that must be exceeded before excluding all measurements of either parameter. Defaults to 0.5.
 #' @param sd.recenter specifies how to recenter medians. May be a data frame or
 #' table w/median SD-scores per day of life by gender and parameter, or "NHANES"
-#' or "derive" as a character vector.
+#' or "derive" as a character vector. If "skip" is provided, then no re-centering will be performed.
 #' \itemize{
 #'   \item If `sd.recenter` is specified as a data set, use the data set
 #'   \item If `sd.recenter` is specified as "`nhanes`", use NHANES reference medians
 #'   \item If `sd.recenter` is specified as "`derive`", derive from input
+#'   \item If `sd.recenter` is specified as "`skip`", then do not recenter
 #'   \item If `sd.recenter` is not specified or `NA`:
 #'     \itemize{
 #'       \item If the input set has at least 5,000 observations, derive medians from input
@@ -1929,9 +1930,20 @@ cleangrowth <- function(subjid,
   # returns a data table indexed by param, sex, agedays. can use NHANES reference
   # data, derive from input, or use user-supplied data.
   if (!is.data.table(sd.recenter)) {
+    # optionally skip re-centering by provide a median of 0 for all observations in the dataset
+    if ((is.character(sd.recenter) & tolower(sd.recenter) == "skip")) {
+      sd.recenter <- data.all[, .(sd.median=0), keyby=.(param,sex,agedays)]
+      if (!quietly)
+        cat(
+          sprintf(
+            "[%s] Skipping re-centering...\n",
+            Sys.time()
+          )
+        )
+    }
     # Use NHANES medians if the string "nhanes" is specified instead of a data.table
     # or if sd.recenter is not specified as "derive" and N < 5000.
-    if ((is.character(sd.recenter) & tolower(sd.recenter) == "nhanes") |
+    else if ((is.character(sd.recenter) & tolower(sd.recenter) == "nhanes") |
       (!(is.character(sd.recenter) & tolower(sd.recenter) == "derive") & (data.all[, .N] < 5000))) {
       nhanes_reference_medians_path <- ifelse(
         ref.data.path == "",
