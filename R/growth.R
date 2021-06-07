@@ -1591,7 +1591,7 @@ cleanbatch <- function(data.df,
 #' Clean growth measurements
 #'
 #' @param subjid Vector of unique identifiers for each subject in the database.
-#' @param param Vector identifying each measurement, may be 'WEIGHTKG', 'HEIGHTCM', or 'LENGTHCM'
+#' @param param Vector identifying each measurement, may be 'WEIGHTKG', 'HEIGHTCM', 'LENGTHCM', or 'HCCM'
 #'   'HEIGHTCM' vs. 'LENGTHCM' only affects z-score calculations between ages 24 to 35 months (730 to 1095 days).
 #'   All linear measurements below 731 days of life (age 0-23 months) are interpreted as supine length, and
 #'   all linear measurements above 1095 days of life (age 36+ months) are interpreted as standing height.
@@ -1651,6 +1651,9 @@ cleanbatch <- function(data.df,
 #' using the default exponent.
 #' @param ref.data.path Path to reference data. If not supplied, the year 2000
 #' Centers for Disease Control (CDC) reference data will be used.
+#' @param cdc.only Whether or not  CDC data should be used for all ages. Defaults to true.
+#' If head circumference measurements are also being cleaned, then the recommend value is false, which
+#' uses WHO reference data for observations at age less than 731 days and CDC data thereafter.
 #' @param log.path Path to log file output when running in parallel (non-quiet mode). Default is ".". A new
 #' directory will be created if necessary.
 #' @param parallel Determines if function runs in parallel.  Defaults to FALSE.
@@ -1721,6 +1724,7 @@ cleangrowth <- function(subjid,
                         ewma.exp = -1.5,
                         ref.data.path = "",
                         log.path = ".",
+                        cdc.only = T,
                         parallel = F,
                         num.batches = NA,
                         quietly = T) {
@@ -1853,7 +1857,7 @@ cleangrowth <- function(subjid,
   # calculate z scores
   if (!quietly)
     cat(sprintf("[%s] Calculating z-scores...\n", Sys.time()))
-  measurement.to.z <- read_anthro(ref.data.path, cdc.only = T)
+  measurement.to.z <- read_anthro(ref.data.path, cdc.only = cdc.only)
   data.all[, z.orig := measurement.to.z(param, agedays, sex, v)]
 
   # calculate "standard deviation" scores
