@@ -2125,6 +2125,11 @@ read_anthro <- function(path = "", cdc.only = F) {
     system.file(file.path("extdata", "bmianthro.txt"), package = "growthcleanr"),
     file.path(path, "bmianthro.txt")
   )
+  hcanthro_path <- ifelse(
+    path == "",
+    system.file(file.path("extdata", "hcanthro.txt"), package = "growthcleanr"),
+    file.path(path, "hcanthro.txt")
+  )
   growth_cdc_ext_path <- ifelse(
     path == "",
     system.file(file.path("extdata", "growthfile_cdc_ext.csv"), package = "growthcleanr"),
@@ -2134,6 +2139,7 @@ read_anthro <- function(path = "", cdc.only = F) {
 
   growth_cdc_ext <- read.csv(growth_cdc_ext_path)
 
+  # read data files, and calculate csdpos and csdneg for WHO datasets (it is pre-calculated for CDC)
   l <- list(
     with(
       read.table(weianthro_path, header = T),
@@ -2145,8 +2151,8 @@ read_anthro <- function(path = "", cdc.only = F) {
         l,
         m,
         s,
-        csdpos = as.double(NA),
-        csdneg = as.double(NA)
+        csdpos = ((m*(1 + (2*l*s))^(1/l)) - m)/2,
+        csdneg = (m - (m*(1 + (-2*l*s))^(1/l)))/2
       )
     ),
     with(
@@ -2159,8 +2165,8 @@ read_anthro <- function(path = "", cdc.only = F) {
         l,
         m,
         s,
-        csdpos = as.double(NA),
-        csdneg = as.double(NA)
+        csdpos = ((m*(1 + (2*l*s))^(1/l)) - m)/2,
+        csdneg = (m - (m*(1 + (-2*l*s))^(1/l)))/2
       )
     ),
     with(
@@ -2173,8 +2179,22 @@ read_anthro <- function(path = "", cdc.only = F) {
         l,
         m,
         s,
-        csdpos = as.double(NA),
-        csdneg = as.double(NA)
+        csdpos = ((m*(1 + (2*l*s))^(1/l)) - m)/2,
+        csdneg = (m - (m*(1 + (-2*l*s))^(1/l)))/2
+      )
+    ),
+    with(
+      read.table(hcanthro_path, header = T),
+      data.frame(
+        src = 'WHO',
+        param = 'HCCM',
+        sex = sex - 1,
+        age,
+        l,
+        m,
+        s,
+        csdpos = ((m*(1 + (2*l*s))^(1/l)) - m)/2,
+        csdneg = (m - (m*(1 + (-2*l*s))^(1/l)))/2
       )
     ),
     with(
