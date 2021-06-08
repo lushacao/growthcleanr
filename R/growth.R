@@ -1622,7 +1622,8 @@ cleanbatch <- function(data.df,
 #' or "derive" as a character vector. If "skip" is provided, then no re-centering will be performed.
 #' \itemize{
 #'   \item If `sd.recenter` is specified as a data set, use the data set
-#'   \item If `sd.recenter` is specified as "`nhanes`", use NHANES reference medians
+#'   \item If `sd.recenter` is specified as "`nhanes`", use NHANES reference medians;
+#'         note that for head circumference reference medians are derived from Children's Hospital of Philadelphia data
 #'   \item If `sd.recenter` is specified as "`derive`", derive from input
 #'   \item If `sd.recenter` is specified as "`skip`", then do not recenter
 #'   \item If `sd.recenter` is not specified or `NA`:
@@ -1954,7 +1955,12 @@ cleangrowth <- function(subjid,
         system.file(file.path("extdata", "nhanes-reference-medians.csv"), package = "growthcleanr"),
         file.path(ref.data.path, "nhanes-reference-medians.csv")
       )
-      sd.recenter <- fread(nhanes_reference_medians_path)
+      chop_reference_medians_hc_path <- ifelse(
+        ref.data.path == "",
+        system.file(file.path("extdata", "chop-reference-medians-hc.csv"), package = "growthcleanr"),
+        file.path(ref.data.path, "chop-reference-medians-hc.csv")
+      )
+      sd.recenter <- rbind(fread(nhanes_reference_medians_path), fread(chop_reference_medians_hc_path))
       if (!quietly)
         cat(
           sprintf(
@@ -2265,9 +2271,12 @@ read_anthro <- function(path = "", cdc.only = F) {
   setkey(anthro, src, param, sex, age)
 
   return(function(param, agedays, sex, measurement, csd = F) {
-    # For now, we will only use CDC growth reference data, note that the cubically interpolated file
-    # we are using has linear measurments derived from length data for children < 731 days, and height thereafter
-    src <- ifelse(agedays < 731 & !cdc.only, 'WHO', 'CDC')
+    # For now, we will only use CDC growth reference data for length and weight (cdc.only = T in normal usage),
+    # note that the cubically interpolated file we are using has linear measurments derived from length data
+    # for children < 731 days, and height thereafter.
+    # For head circumference data, will always use WHO data which avoids some skewness problems in the 2000 CDC
+    # reference data. WHO data will be used for head circumference regardless of age or the value in cdc.only
+    src <- ifelse(agedays < 731 & !cdc.only | param == 'HCCM', 'WHO', 'CDC')
 
     # keep column sequence the same fo efficient join
     dt <- data.table(src, param, sex, agedays, measurement)
